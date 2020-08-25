@@ -11,7 +11,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
+import android.text.TextUtils;
 import android.util.Log;
+import android.util.Pair;
 import android.view.View;
 import android.widget.TextView;
 
@@ -21,11 +23,25 @@ import com.baidu.aip.asrwakeup3.core.recog.MyRecognizer;
 import com.baidu.aip.asrwakeup3.core.recog.RecogResult;
 import com.baidu.aip.asrwakeup3.core.recog.listener.IRecogListener;
 import com.baidu.aip.asrwakeup3.core.recog.listener.MessageStatusRecogListener;
+import com.baidu.aip.asrwakeup3.core.recog.listener.StatusRecogListener;
 import com.baidu.speech.asr.SpeechConstant;
+import com.baidu.tts.chainofresponsibility.logger.LoggerProxy;
+import com.baidu.tts.client.SpeechSynthesizer;
+import com.baidu.tts.client.SpeechSynthesizerListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.neusoft.qiangzi.ttl.control.InitConfig;
+import com.neusoft.qiangzi.ttl.control.MySyntherizer;
+import com.neusoft.qiangzi.ttl.control.NonBlockSyntherizer;
+import com.neusoft.qiangzi.ttl.listener.MessageListener;
+import com.neusoft.qiangzi.ttl.listener.UiMessageListener;
+import com.neusoft.qiangzi.ttl.util.Auth;
+import com.neusoft.qiangzi.ttl.util.IOfflineResourceConst;
+import com.neusoft.qiangzi.ttl.util.OfflineResource;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
@@ -35,37 +51,81 @@ public class MainActivity extends AppCompatActivity {
     FloatingActionButton actionButton;
     protected MyRecognizer myRecognizer;
     protected Handler handler;
+    // 主控制类，所有合成控制方法从这个类开始
+    protected MySyntherizer synthesizer;
+    protected String appId;
+    protected String appKey;
+    protected String secretKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        try {
+            Auth.getInstance(this);
+        } catch (Auth.AuthCheckException e) {
+            Log.e(TAG, "onCreate: AuthCheckException");
+            return;
+        }
+        appId = Auth.getInstance(this).getAppId();
+        appKey = Auth.getInstance(this).getAppKey();
+        secretKey = Auth.getInstance(this).getSecretKey();
+
         tvRecgResult = findViewById(R.id.tvVoiceRecgResult);
         tvRealtimeResult = findViewById(R.id.tvRealtimeResult);
         actionButton = findViewById(R.id.floatingActionButton);
 
         initPermission();
-        handler = new Handler() {
-            /*
-             * @param msg
-             */
-            @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
-                tvRecgResult.append(msg.obj.toString() + "\n");
-            }
 
-        };
+        //初始化asr
 //        IRecogListener listener = new MessageStatusRecogListener(handler);
         myRecognizer = new MyRecognizer(this, listener);
-
         actionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 start();
             }
         });
+
+        initialTts(); // 初始化TTS引擎
+    }
+
+    protected void initialTts() {
+        LoggerProxy.printable(true); // 日志打印在logcat中
+        // 设置初始化参数
+        // 此处可以改为 含有您业务逻辑的SpeechSynthesizerListener的实现类
+        SpeechSynthesizerListener listener = new MessageListener();
+        InitConfig config = getInitConfig(listener);
+        synthesizer = new NonBlockSyntherizer(this, config, null); // 此处可以改为MySyntherizer 了解调用过程
+    }
+
+    protected InitConfig getInitConfig(SpeechSynthesizerListener listener) {
+        Map<String, String> params = getParams();
+        // 添加你自己的参数
+        InitConfig initConfig;
+        // appId appKey secretKey 网站上您申请的应用获取。注意使用离线合成功能的话，需要应用中填写您app的包名。包名在build.gradle中获取。
+        initConfig = new InitConfig(appId, appKey, secretKey, IOfflineResourceConst.DEFAULT_SDK_TTS_MODE, params, listener);
+        return initConfig;
+    }
+    /**
+     * 合成的参数，可以初始化时填写，也可以在合成前设置。
+     *
+     * @return 合成参数Map
+     */
+    protected Map<String, String> getParams() {
+        Map<String, String> params = new HashMap<>();
+        // 以下参数均为选填
+        // 设置在线发声音人： 0 普通女声（默认） 1 普通男声 3 情感男声<度逍遥> 4 情感儿童声<度丫丫>, 其它发音人见文档
+        params.put(SpeechSynthesizer.PARAM_SPEAKER, "0");
+        // 设置合成的音量，0-15 ，默认 5
+        params.put(SpeechSynthesizer.PARAM_VOLUME, "15");
+        // 设置合成的语速，0-15 ，默认 5
+        params.put(SpeechSynthesizer.PARAM_SPEED, "5");
+        // 设置合成的语调，0-15 ，默认 5
+        params.put(SpeechSynthesizer.PARAM_PITCH, "5");
+
+        return params;
     }
 
     /**
@@ -105,7 +165,6 @@ public class MainActivity extends AppCompatActivity {
      * 基于DEMO集成4.1 发送停止事件 停止录音
      */
     protected void stop() {
-
         myRecognizer.stop();
     }
 
@@ -115,9 +174,44 @@ public class MainActivity extends AppCompatActivity {
      * 基于DEMO集成4.2 发送取消事件 取消本次识别
      */
     protected void cancel() {
-
         myRecognizer.cancel();
     }
+
+
+    /**
+     * speak 实际上是调用 synthesize后，获取音频流，然后播放。
+     * 获取音频流的方式见SaveFileActivity及FileSaveListener
+     * 需要合成的文本text的长度不能超过1024个GBK字节。
+     */
+    private void speak(String text) {
+        // 合成前可以修改参数：
+        // Map<String, String> params = getParams();
+        // params.put(SpeechSynthesizer.PARAM_SPEAKER, "3"); // 设置为度逍遥
+        // synthesizer.setParams(params);
+        int result = synthesizer.speak(text);
+    }
+
+
+    /**
+     * 合成但是不播放，
+     * 音频流保存为文件的方法可以参见SaveFileActivity及FileSaveListener
+     */
+    private void synthesize(String text) {
+        int result = synthesizer.synthesize(text);
+    }
+
+    /**
+     * 批量播放
+     */
+    private void batchSpeak() {
+        List<Pair<String, String>> texts = new ArrayList<>();
+        texts.add(new Pair<>("开始批量播放，", "a0"));
+        texts.add(new Pair<>("123456，", "a1"));
+        texts.add(new Pair<>("欢迎使用百度语音，，，", "a2"));
+        texts.add(new Pair<>("重(chong2)量这个是多音字示例", "a3"));
+        int result = synthesizer.batchSpeak(texts);
+    }
+
 
     /**
      * 销毁时需要释放识别资源。
@@ -125,6 +219,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
 
+        synthesizer.release();
         // 如果之前调用过myRecognizer.loadOfflineEngine()， release()里会自动调用释放离线资源
         // 基于DEMO5.1 卸载离线资源(离线时使用) release()方法中封装了卸载离线资源的过程
         // 基于DEMO的5.2 退出事件管理器
@@ -137,90 +232,40 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-    IRecogListener listener = new IRecogListener() {
+    IRecogListener listener = new StatusRecogListener() {
         @Override
         public void onAsrReady() {
             tvRealtimeResult.setText("");
         }
-
-        @Override
-        public void onAsrBegin() {
-
-        }
-
-        @Override
-        public void onAsrEnd() {
-
-        }
-
         @Override
         public void onAsrPartialResult(String[] results, RecogResult recogResult) {
             StringBuilder sb = new StringBuilder();
-            for (String word:results
+            for (String word : results
             ) {
                 sb.append(word);
             }
             tvRealtimeResult.setText(sb.toString());
         }
-
-        @Override
-        public void onAsrOnlineNluResult(String nluResult) {
-
-        }
-
         @Override
         public void onAsrFinalResult(String[] results, RecogResult recogResult) {
 
             StringBuilder sb = new StringBuilder();
             tvRecgResult.append("\n");
-            for (String word:results
-                 ) {
+            for (String word : results
+            ) {
                 sb.append(word);
                 tvRecgResult.append(word);
             }
             tvRealtimeResult.setText(sb.toString());
+            synthesizer.speak("您说的是："+sb.toString()+"吗？");
         }
-
         @Override
         public void onAsrFinish(RecogResult recogResult) {
             tvRealtimeResult.setText("");
         }
 
-        @Override
-        public void onAsrFinishError(int errorCode, int subErrorCode, String descMessage, RecogResult recogResult) {
-
-        }
-
-        @Override
-        public void onAsrLongFinish() {
-
-        }
-
-        @Override
-        public void onAsrVolume(int volumePercent, int volume) {
-
-        }
-
-        @Override
-        public void onAsrAudio(byte[] data, int offset, int length) {
-
-        }
-
-        @Override
-        public void onAsrExit() {
-
-        }
-
-        @Override
-        public void onOfflineLoaded() {
-
-        }
-
-        @Override
-        public void onOfflineUnLoaded() {
-
-        }
     };
+
     /**
      * android 6.0 以上需要动态申请权限
      */

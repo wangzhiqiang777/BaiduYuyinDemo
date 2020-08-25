@@ -1,3 +1,4 @@
+include ':ttl'
 include ':asr'
 include ':app'
 rootProject.name = "BaiduYuyinTest"
