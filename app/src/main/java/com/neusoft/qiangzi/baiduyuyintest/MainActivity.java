@@ -19,13 +19,12 @@ import com.baidu.aip.asrwakeup3.core.wakeup.WakeUpResult;
 import com.baidu.aip.asrwakeup3.core.wakeup.listener.IWakeupListener;
 import com.baidu.aip.asrwakeup3.core.wakeup.listener.SimpleWakeupListener;
 import com.baidu.speech.asr.SpeechConstant;
-import com.baidu.tts.client.SpeechSynthesizer;
-import com.baidu.tts.client.SpeechSynthesizerListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.neusoft.qiangzi.baiduyuyintest.ChatRobot.ChatRobot;
 import com.neusoft.qiangzi.ttl.control.InitConfig;
 import com.neusoft.qiangzi.ttl.control.MySyntherizer;
 import com.neusoft.qiangzi.ttl.control.NonBlockSyntherizer;
+import com.neusoft.qiangzi.ttl.listener.ISpeechListener;
 import com.neusoft.qiangzi.ttl.listener.MessageListener;
 
 import java.util.ArrayList;
@@ -66,8 +65,7 @@ public class MainActivity extends AppCompatActivity {
         initPermission();//动态权限
 
         mRecognizer = new MyRecognizer(this, recogListener);//初始化asr
-        mSynthesizer = new NonBlockSyntherizer(this,
-                new InitConfig(this, getParams(), synthesizerListener), null);// 初始化TTS引擎
+        mSynthesizer = new NonBlockSyntherizer(this,getSpeechConfig(),null);// 初始化TTS引擎
         mWakeup = new MyWakeup(this, wakeupListener);//初始化唤醒
         mChatRobot = new ChatRobot(this);//语音聊天机器人
         mChatRobot.setOnResponseListener(robotListener);
@@ -94,21 +92,20 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 合成的参数，可以初始化时填写，也可以在合成前设置。
-     * @return 合成参数Map
      */
-    protected Map<String, String> getParams() {
-        Map<String, String> params = new HashMap<>();
+    protected InitConfig getSpeechConfig() {
+        InitConfig initConfig = new InitConfig(this, synthesizerListener);
         // 以下参数均为选填
         // 设置在线发声音人： 0 普通女声（默认） 1 普通男声 3 情感男声<度逍遥> 4 情感儿童声<度丫丫>, 其它发音人见文档
-        params.put(SpeechSynthesizer.PARAM_SPEAKER, "0");
+        initConfig.setParamSpeaker(InitConfig.PARAM_SPEAKER_DUXIAOTONG);
         // 设置合成的音量，0-15 ，默认 5
-        params.put(SpeechSynthesizer.PARAM_VOLUME, "15");
+        initConfig.setParamVolume(15);
         // 设置合成的语速，0-15 ，默认 5
-        params.put(SpeechSynthesizer.PARAM_SPEED, "7");
+        initConfig.setParamSpeed(6);
         // 设置合成的语调，0-15 ，默认 5
-        params.put(SpeechSynthesizer.PARAM_PITCH, "5");
+        initConfig.setParamPitch(5);
 
-        return params;
+        return initConfig;
     }
 
     /**
@@ -204,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 语音合成的监听器定义
      */
-    SpeechSynthesizerListener synthesizerListener = new MessageListener(){
+    ISpeechListener synthesizerListener = new MessageListener(){
         @Override
         public void onSpeechFinish(String utteranceId) {
             super.onSpeechFinish(utteranceId);

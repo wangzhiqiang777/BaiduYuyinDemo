@@ -11,6 +11,8 @@ import com.baidu.tts.client.SpeechSynthesizeBag;
 import com.baidu.tts.client.SpeechSynthesizer;
 import com.baidu.tts.client.SpeechSynthesizerListener;
 import com.neusoft.qiangzi.ttl.MainHandlerConstant;
+import com.neusoft.qiangzi.ttl.listener.ISpeechListener;
+import com.neusoft.qiangzi.ttl.listener.MySpeechListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +29,7 @@ public class MySyntherizer implements MainHandlerConstant {
     protected SpeechSynthesizer mSpeechSynthesizer;
     protected Context context;
     protected Handler mainHandler;
+    protected ISpeechListener speechListener;
 
     private static final String TAG = "NonBlockSyntherizer";
 
@@ -63,7 +66,8 @@ public class MySyntherizer implements MainHandlerConstant {
         mSpeechSynthesizer.setContext(context);
         Log.i("MySyntherizer", "包名:" + context.getPackageName());
 
-        SpeechSynthesizerListener listener = config.getListener();
+        MySpeechListener listener = new MySpeechListener(config.getListener());
+//        SpeechSynthesizerListener listener = config.getListener();
 
         // listener = new SwitchSpeakerListener(mainHandler,context,this); // 测试播放过程中切换发音人逻辑
         mSpeechSynthesizer.setSpeechSynthesizerListener(listener);
@@ -87,6 +91,10 @@ public class MySyntherizer implements MainHandlerConstant {
         // 此时可以调用 speak和synthesize方法
         sendToUiThread(INIT_SUCCESS, "合成引擎初始化成功");
         return true;
+    }
+
+    public void setSpeechListener(ISpeechListener speechListener) {
+        this.speechListener = speechListener;
     }
 
     /**

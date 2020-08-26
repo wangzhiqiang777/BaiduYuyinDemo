@@ -11,7 +11,7 @@ import com.neusoft.qiangzi.ttl.MainHandlerConstant;
  * Created by fujiayi on 2017/5/19.
  */
 
-public class MessageListener implements SpeechSynthesizerListener, MainHandlerConstant {
+public class MessageListener implements ISpeechListener, MainHandlerConstant {
     private static final String TAG = "MessageListener";
 
     /**
