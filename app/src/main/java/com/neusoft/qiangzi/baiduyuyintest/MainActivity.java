@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
 
     protected MyRecognizer myRecognizer;//语音识别对象
     protected MySyntherizer synthesizer;//语音合成对象
+    private ChatRobot chatRobot;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,10 +59,13 @@ public class MainActivity extends AppCompatActivity {
 //        IRecogListener listener = new MessageStatusRecogListener(handler);
         myRecognizer = new MyRecognizer(this, listener);
         initialTts(); // 初始化TTS引擎
+        chatRobot = new ChatRobot(this);
+        chatRobot.setOnResponseListener(robotListener);
 
         actionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                synthesizer.stop();
                 start();
             }
         });
@@ -157,12 +161,18 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 批量播放
      */
-    private void batchSpeak() {
+    private void batchSpeak(String[] strlist) {
         List<Pair<String, String>> texts = new ArrayList<>();
-        texts.add(new Pair<>("开始批量播放，", "a0"));
-        texts.add(new Pair<>("123456，", "a1"));
-        texts.add(new Pair<>("欢迎使用百度语音，，，", "a2"));
-        texts.add(new Pair<>("重(chong2)量这个是多音字示例", "a3"));
+        for (String str:strlist
+             ) {
+            Pair<String,String> pair = new Pair<>(str, null);
+            texts.add(pair);
+        }
+
+//        texts.add(new Pair<>("开始批量播放，", "a0"));
+//        texts.add(new Pair<>("123456，", "a1"));
+//        texts.add(new Pair<>("欢迎使用百度语音，，，", "a2"));
+//        texts.add(new Pair<>("重(chong2)量这个是多音字示例", "a3"));
         int result = synthesizer.batchSpeak(texts);
     }
 
@@ -206,13 +216,31 @@ public class MainActivity extends AppCompatActivity {
                 tvRecgResult.append(word);
             }
             tvRealtimeResult.setText(sb.toString());
-            synthesizer.speak("您说的是："+sb.toString()+"吗？");
+//            synthesizer.speak("您说的是："+sb.toString()+"吗？");
+            chatRobot.speakToQingyun(sb.toString());
         }
         @Override
         public void onAsrFinish(RecogResult recogResult) {
             tvRealtimeResult.setText("");
         }
 
+    };
+    ChatRobot.OnResponseListener robotListener = new ChatRobot.OnResponseListener() {
+        @Override
+        public void OnResponse(String response) {
+            if(response==null || response.isEmpty())return;
+            String[] strlist = response.split("\\{br\\}");
+            if(strlist.length > 1){
+                batchSpeak(strlist);
+                for (String str:strlist
+                     ) {
+                    tvRecgResult.append("\n"+str);
+                }
+            }else {
+                tvRecgResult.append("\n"+response);
+                synthesizer.speak(response);
+            }
+        }
     };
 
     /**
