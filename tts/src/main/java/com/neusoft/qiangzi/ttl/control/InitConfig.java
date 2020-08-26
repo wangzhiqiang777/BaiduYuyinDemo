@@ -53,15 +53,14 @@ public class InitConfig {
     }
 
     // 离在线SDK用
-    public InitConfig(Context context, TtsMode ttsMode,
-                      Map<String, String> params, SpeechSynthesizerListener listener) {
+    public InitConfig(Context context, Map<String, String> params, SpeechSynthesizerListener listener) {
         this.appId = getMetaData(context, "com.baidu.speech.APP_ID");
         this.appKey = getMetaData(context, "com.baidu.speech.API_KEY");
         this.secretKey = getMetaData(context, "com.baidu.speech.SECRET_KEY");
         Log.d(TAG, "InitConfig: appId="+appId);
         Log.d(TAG, "InitConfig: appKey="+appKey);
         Log.d(TAG, "InitConfig: secretKey="+secretKey);
-        this.ttsMode = ttsMode;
+        this.ttsMode = IOfflineResourceConst.DEFAULT_SDK_TTS_MODE;
         this.params = params;
         this.listener = listener;
     }

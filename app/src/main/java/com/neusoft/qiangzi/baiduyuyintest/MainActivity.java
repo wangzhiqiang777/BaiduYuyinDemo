@@ -6,14 +6,19 @@ import android.os.Bundle;
 import android.util.Log;
 import android.util.Pair;
 import android.view.View;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.baidu.aip.asrwakeup3.core.recog.MyRecognizer;
 import com.baidu.aip.asrwakeup3.core.recog.RecogResult;
 import com.baidu.aip.asrwakeup3.core.recog.listener.IRecogListener;
 import com.baidu.aip.asrwakeup3.core.recog.listener.StatusRecogListener;
+import com.baidu.aip.asrwakeup3.core.wakeup.MyWakeup;
+import com.baidu.aip.asrwakeup3.core.wakeup.WakeUpResult;
+import com.baidu.aip.asrwakeup3.core.wakeup.listener.IWakeupListener;
+import com.baidu.aip.asrwakeup3.core.wakeup.listener.SimpleWakeupListener;
 import com.baidu.speech.asr.SpeechConstant;
-import com.baidu.tts.chainofresponsibility.logger.LoggerProxy;
 import com.baidu.tts.client.SpeechSynthesizer;
 import com.baidu.tts.client.SpeechSynthesizerListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -22,13 +27,13 @@ import com.neusoft.qiangzi.ttl.control.InitConfig;
 import com.neusoft.qiangzi.ttl.control.MySyntherizer;
 import com.neusoft.qiangzi.ttl.control.NonBlockSyntherizer;
 import com.neusoft.qiangzi.ttl.listener.MessageListener;
-import com.neusoft.qiangzi.ttl.util.IOfflineResourceConst;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -40,10 +45,13 @@ public class MainActivity extends AppCompatActivity {
     TextView tvRecgResult;
     TextView tvRealtimeResult;
     FloatingActionButton actionButton;
+    Switch swWakeUp;
 
-    protected MyRecognizer myRecognizer;//语音识别对象
-    protected MySyntherizer synthesizer;//语音合成对象
-    private ChatRobot chatRobot;
+    protected MyRecognizer mRecognizer;//语音识别对象
+    protected MySyntherizer mSynthesizer;//语音合成对象
+    protected MyWakeup mWakeup;//语音唤醒
+    private ChatRobot mChatRobot;
+    private boolean wakeupResponseStart;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,35 +61,35 @@ public class MainActivity extends AppCompatActivity {
         tvRecgResult = findViewById(R.id.tvVoiceRecgResult);
         tvRealtimeResult = findViewById(R.id.tvRealtimeResult);
         actionButton = findViewById(R.id.floatingActionButton);
+        swWakeUp = findViewById(R.id.switchWakeUp);
 
         initPermission();//动态权限
 
-        //初始化asr
-//        IRecogListener listener = new MessageStatusRecogListener(handler);
-        myRecognizer = new MyRecognizer(this, listener);
-        initialTts(); // 初始化TTS引擎
-        chatRobot = new ChatRobot(this);
-        chatRobot.setOnResponseListener(robotListener);
+        mRecognizer = new MyRecognizer(this, recogListener);//初始化asr
+        mSynthesizer = new NonBlockSyntherizer(this,
+                new InitConfig(this, getParams(), synthesizerListener), null);// 初始化TTS引擎
+        mWakeup = new MyWakeup(this, wakeupListener);//初始化唤醒
+        mChatRobot = new ChatRobot(this);//语音聊天机器人
+        mChatRobot.setOnResponseListener(robotListener);
 
         actionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                synthesizer.stop();
-                start();
+                mSynthesizer.stop();
+                recogStart();
             }
         });
-    }
+        swWakeUp.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
 
-    protected void initialTts() {
-        LoggerProxy.printable(true); // 日志打印在logcat中
-        // 设置初始化参数
-        Map<String, String> params = getParams();
-        // 此处可以改为 含有您业务逻辑的SpeechSynthesizerListener的实现类
-        SpeechSynthesizerListener listener = new MessageListener();
-        // 添加你自己的参数
-        //appId appKey secretKey在下面构造函数中，从Manifest中获取。
-        InitConfig initConfig = new InitConfig(this, IOfflineResourceConst.DEFAULT_SDK_TTS_MODE, params, listener);
-        synthesizer = new NonBlockSyntherizer(this, initConfig, null); // 此处可以改为MySyntherizer 了解调用过程
+                if(b){
+                    wakeupStart();
+                }else {
+                    mWakeup.stop();
+                }
+            }
+        });
     }
 
     /**
@@ -107,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
      * 开始录音，点击“开始”按钮后调用。
      * 基于DEMO集成2.1, 2.2 设置识别参数并发送开始事件
      */
-    protected void start() {
+    protected void recogStart() {
         // DEMO集成步骤2.1 拼接识别参数： 此处params可以打印出来，直接写到你的代码里去，最终的json一致即可。
         final Map<String, Object> params = new LinkedHashMap<String, Object>();
         // 基于SDK集成2.1 设置识别参数
@@ -115,48 +123,7 @@ public class MainActivity extends AppCompatActivity {
         // params 也可以根据文档此处手动修改，参数会以json的格式在界面和logcat日志中打印
         Log.i(TAG, "设置的start输入参数：" + params);
         // DEMO集成步骤2.2 开始识别
-        myRecognizer.start(params);
-    }
-
-    /**
-     * 开始录音后，手动点击“停止”按钮。
-     * SDK会识别不会再识别停止后的录音。
-     * 基于DEMO集成4.1 发送停止事件 停止录音
-     */
-    protected void stop() {
-        myRecognizer.stop();
-    }
-
-    /**
-     * 开始录音后，手动点击“取消”按钮。
-     * SDK会取消本次识别，回到原始状态。
-     * 基于DEMO集成4.2 发送取消事件 取消本次识别
-     */
-    protected void cancel() {
-        myRecognizer.cancel();
-    }
-
-
-    /**
-     * speak 实际上是调用 synthesize后，获取音频流，然后播放。
-     * 获取音频流的方式见SaveFileActivity及FileSaveListener
-     * 需要合成的文本text的长度不能超过1024个GBK字节。
-     */
-    private void speak(String text) {
-        // 合成前可以修改参数：
-        // Map<String, String> params = getParams();
-        // params.put(SpeechSynthesizer.PARAM_SPEAKER, "3"); // 设置为度逍遥
-        // synthesizer.setParams(params);
-        int result = synthesizer.speak(text);
-    }
-
-
-    /**
-     * 合成但是不播放，
-     * 音频流保存为文件的方法可以参见SaveFileActivity及FileSaveListener
-     */
-    private void synthesize(String text) {
-        int result = synthesizer.synthesize(text);
+        mRecognizer.start(params);
     }
 
     /**
@@ -174,7 +141,13 @@ public class MainActivity extends AppCompatActivity {
 //        texts.add(new Pair<>("123456，", "a1"));
 //        texts.add(new Pair<>("欢迎使用百度语音，，，", "a2"));
 //        texts.add(new Pair<>("重(chong2)量这个是多音字示例", "a3"));
-        int result = synthesizer.batchSpeak(texts);
+        int result = mSynthesizer.batchSpeak(texts);
+    }
+    private void wakeupStart() {
+        Map<String, Object> params = new HashMap<String, Object>();
+        params.put(SpeechConstant.WP_WORDS_FILE, "assets:///WakeUp.bin");
+        // "assets:///WakeUp.bin" 表示WakeUp.bin文件定义在assets目录下
+        mWakeup.start(params);
     }
 
     /**
@@ -182,17 +155,18 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     protected void onDestroy() {
-        synthesizer.release();
-        myRecognizer.release();
+        mSynthesizer.release();
+        mRecognizer.release();
         Log.i(TAG, "onDestory");
         super.onDestroy();
     }
 
     /**
-     * 语音识别的监听器。这个很重要，需要使用这里接口实现人机交互。
+     * 语音识别的监听器。
+     * 这个很重要，需要使用这里接口实现人机交互。
      * 有三种listener可选。详细参考asr模块下的recog.listener
      */
-    IRecogListener listener = new StatusRecogListener() {
+    IRecogListener recogListener = new StatusRecogListener() {
         @Override
         public void onAsrReady() {
             tvRealtimeResult.setText("");
@@ -219,13 +193,51 @@ public class MainActivity extends AppCompatActivity {
             tvRealtimeResult.setText(sb.toString());
 //            synthesizer.speak("您说的是："+sb.toString()+"吗？");
 //            chatRobot.speakToQingyun(sb.toString());
-            chatRobot.speakToTuring(sb.toString());
+            mChatRobot.speakToTuring(sb.toString());
         }
         @Override
         public void onAsrFinish(RecogResult recogResult) {
             tvRealtimeResult.setText("");
         }
 
+    };
+    /**
+     * 语音合成的监听器定义
+     */
+    SpeechSynthesizerListener synthesizerListener = new MessageListener(){
+        @Override
+        public void onSpeechFinish(String utteranceId) {
+            super.onSpeechFinish(utteranceId);
+            if(wakeupResponseStart){
+                wakeupResponseStart = false;
+                recogStart();
+            }
+        }
+    };
+    /**
+     * 唤醒的监听器定义
+     */
+    IWakeupListener wakeupListener = new SimpleWakeupListener(){
+        @Override
+        public void onSuccess(String word, WakeUpResult result) {
+            super.onSuccess(word, result);
+            Log.d(TAG, "wakeupListener: onSuccess:"+word);
+            mSynthesizer.stop();
+            mRecognizer.cancel();
+            String response;
+            if(word.equals("小乖小乖")){
+                Random r = new Random();
+                response = r.nextBoolean()?"在的！":"我在！";
+            }else if(word.equals("小乖你好")){
+                response = "您好，有什么可以帮您？";
+            }else {
+                response = "我在，您请讲！";
+            }
+            mSynthesizer.speak(response);
+            tvRecgResult.append("\n"+word);
+            tvRecgResult.append("\n"+response);
+            wakeupResponseStart = true;
+        }
     };
     ChatRobot.OnResponseListener robotListener = new ChatRobot.OnResponseListener() {
         @Override
@@ -240,7 +252,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }else {
                 tvRecgResult.append("\n"+response);
-                synthesizer.speak(response);
+                mSynthesizer.speak(response);
             }
         }
     };

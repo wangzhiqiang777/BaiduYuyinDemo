@@ -17,6 +17,11 @@ import org.json.JSONObject;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
+/**
+ * 聊天机器人网站有很多，这里只举了两个例子：
+ * 青云客机器人：http://api.qingyunke.com/
+ * 图灵机器人：http://www.turingapi.com/
+ */
 public class ChatRobot {
     private static final String TAG = "ChatRobot";
     private final static String QINGYUNKE_URL = "http://api.qingyunke.com/api.php?key=free&appid=0&msg=";

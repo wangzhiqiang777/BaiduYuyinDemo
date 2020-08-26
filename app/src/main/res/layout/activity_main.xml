@@ -6,6 +6,14 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <Switch
+        android:id="@+id/switchWakeUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="自动唤醒"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/floatingActionButton"
         android:layout_width="wrap_content"
@@ -25,7 +33,7 @@
         app:layout_constraintBottom_toTopOf="@+id/tvRealtimeResult"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toBottomOf="@+id/switchWakeUp">
 
         <LinearLayout
             android:layout_width="match_parent"
