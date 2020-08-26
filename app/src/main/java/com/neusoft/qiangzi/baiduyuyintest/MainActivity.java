@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
     protected MySyntherizer mSynthesizer;//语音合成对象
     protected MyWakeup mWakeup;//语音唤醒
     private ChatRobot mChatRobot;
-    private boolean wakeupResponseStart;
+    private boolean isContinueRecognize;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
         // 设置合成的音量，0-15 ，默认 5
         initConfig.setParamVolume(15);
         // 设置合成的语速，0-15 ，默认 5
-        initConfig.setParamSpeed(6);
+        initConfig.setParamSpeed(5);
         // 设置合成的语调，0-15 ，默认 5
         initConfig.setParamPitch(5);
 
@@ -154,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         mSynthesizer.release();
         mRecognizer.release();
+        mWakeup.release();
         Log.i(TAG, "onDestory");
         super.onDestroy();
     }
@@ -205,8 +206,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSpeechFinish(String utteranceId) {
             super.onSpeechFinish(utteranceId);
-            if(wakeupResponseStart){
-                wakeupResponseStart = false;
+            if(isContinueRecognize){
+                isContinueRecognize = false;
                 recogStart();
             }
         }
@@ -233,24 +234,27 @@ public class MainActivity extends AppCompatActivity {
             mSynthesizer.speak(response);
             tvRecgResult.append("\n"+word);
             tvRecgResult.append("\n"+response);
-            wakeupResponseStart = true;
+            isContinueRecognize = true;
         }
     };
     ChatRobot.OnResponseListener robotListener = new ChatRobot.OnResponseListener() {
         @Override
         public void OnResponse(String response) {
             if(response==null || response.isEmpty())return;
-            String[] strlist = response.split("\\{br\\}");
-            if(strlist.length > 1){
-                batchSpeak(strlist);
-                for (String str:strlist
-                     ) {
-                    tvRecgResult.append("\n"+str);
-                }
-            }else {
+//            String[] strlist = response.split("\\{br\\}");
+//            if(strlist.length > 1){
+//                batchSpeak(strlist);
+//                for (String str:strlist
+//                     ) {
+//                    tvRecgResult.append("\n"+str);
+//                }
+//            }else {
                 tvRecgResult.append("\n"+response);
                 mSynthesizer.speak(response);
-            }
+                if(response.endsWith("?") || response.endsWith("？")){
+                    isContinueRecognize = true;
+                }
+//            }
         }
     };
 
