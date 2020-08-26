@@ -1,4 +1,4 @@
-package com.neusoft.qiangzi.baiduyuyintest;
+package com.neusoft.qiangzi.baiduyuyintest.ChatRobot;
 
 import android.content.Context;
 import android.util.Log;
@@ -6,9 +6,13 @@ import android.util.Log;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.gson.Gson;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -36,7 +40,7 @@ public class ChatRobot {
             return;
         }
         String url = QINGYUNKE_URL + str;
-        Log.d(TAG, "question: url="+url);
+        Log.d(TAG, "speakToQingyun: url="+url);
 
         StringRequest request = new StringRequest(
                 StringRequest.Method.GET,
@@ -48,7 +52,7 @@ public class ChatRobot {
                         Log.d(TAG, "onResponse: response="+response);
 
                         Gson gson = new Gson();
-                        QingyunResult r = gson.fromJson(response, QingyunResult.class);
+                        QingyunResponse r = gson.fromJson(response, QingyunResponse.class);
                         if(r!=null){
                             responseListener.OnResponse(r.content);
                         }
@@ -65,29 +69,41 @@ public class ChatRobot {
     }
 
     public void speakToTuring(String text){
-        String str;
+        Log.d(TAG, "speakToTuring: text="+text);
+
+        final TuringRequest turingRequest = new TuringRequest();
+        turingRequest.setInputText(text);
+        Gson gson = new Gson();
+        String json = gson.toJson(turingRequest, TuringRequest.class);
+        Log.d(TAG, "speakToTuring: json="+json);
+        JSONObject params = null;
         try {
-            str = URLEncoder.encode(text, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
+            params=new JSONObject(json);
+        } catch (JSONException e) {
+            Log.e(TAG, "speakToTuring: ", e);
             e.printStackTrace();
             return;
         }
-        String url = QINGYUNKE_URL + str;
-        Log.d(TAG, "question: url="+url);
-
-        StringRequest request = new StringRequest(
-                StringRequest.Method.GET,
-                url,
-                new Response.Listener<String>() {
+        JsonObjectRequest request = new JsonObjectRequest(
+                TURING_URL, params,
+                new Response.Listener<JSONObject>() {
                     @Override
-                    public void onResponse(String response) {
+                    public void onResponse(JSONObject response) {
 
-                        Log.d(TAG, "onResponse: response="+response);
-
+                        Log.d(TAG, "onResponse: response="+response.toString());
                         Gson gson = new Gson();
-                        QingyunResult r = gson.fromJson(response, QingyunResult.class);
-                        if(r!=null){
-                            responseListener.OnResponse(r.content);
+                        TuringResponse turingResponse = gson.fromJson(response.toString(), TuringResponse.class);
+                        if(turingRequest!=null){
+                            for (TuringResponse.ResultsBean result:turingResponse.getResults()
+                                 ) {
+                                Log.d(TAG, "onResponse: result="+result.getResultType());
+                                if(result.getResultType().equals("text")){
+                                    Log.d(TAG, "onResponse: text="+result.getValues().getText());
+                                    responseListener.OnResponse(result.getValues().getText());
+                                }
+                            }
+                        }else {
+                            Log.e(TAG, "onResponse: Gson parse error");
                         }
                     }
                 },
@@ -96,8 +112,8 @@ public class ChatRobot {
                     public void onErrorResponse(VolleyError error) {
                         Log.e(TAG, "onErrorResponse: ", error);
                     }
-                }
-        );
+                });
+
         queue.add(request);
     }
 
@@ -107,10 +123,5 @@ public class ChatRobot {
 
     public interface OnResponseListener{
         void OnResponse(String response);
-    }
-
-    static class QingyunResult {
-        int result;
-        String content;
     }
 }

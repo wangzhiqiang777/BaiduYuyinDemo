@@ -17,6 +17,7 @@ import com.baidu.tts.chainofresponsibility.logger.LoggerProxy;
 import com.baidu.tts.client.SpeechSynthesizer;
 import com.baidu.tts.client.SpeechSynthesizerListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.neusoft.qiangzi.baiduyuyintest.ChatRobot.ChatRobot;
 import com.neusoft.qiangzi.ttl.control.InitConfig;
 import com.neusoft.qiangzi.ttl.control.MySyntherizer;
 import com.neusoft.qiangzi.ttl.control.NonBlockSyntherizer;
@@ -217,7 +218,8 @@ public class MainActivity extends AppCompatActivity {
             }
             tvRealtimeResult.setText(sb.toString());
 //            synthesizer.speak("您说的是："+sb.toString()+"吗？");
-            chatRobot.speakToQingyun(sb.toString());
+//            chatRobot.speakToQingyun(sb.toString());
+            chatRobot.speakToTuring(sb.toString());
         }
         @Override
         public void onAsrFinish(RecogResult recogResult) {
