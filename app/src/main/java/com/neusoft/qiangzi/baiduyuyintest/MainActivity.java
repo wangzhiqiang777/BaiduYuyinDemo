@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         InitConfig initConfig = new InitConfig(this, synthesizerListener);
         // 以下参数均为选填
         // 设置在线发声音人： 0 普通女声（默认） 1 普通男声 3 情感男声<度逍遥> 4 情感儿童声<度丫丫>, 其它发音人见文档
-        initConfig.setParamSpeaker(InitConfig.PARAM_SPEAKER_DUXIAOTONG);
+        initConfig.setParamSpeaker(InitConfig.PARAM_SPEAKER_EMOTION_CHILD);
         // 设置合成的音量，0-15 ，默认 5
         initConfig.setParamVolume(15);
         // 设置合成的语速，0-15 ，默认 5

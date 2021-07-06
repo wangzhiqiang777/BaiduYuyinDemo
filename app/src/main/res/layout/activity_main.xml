@@ -10,9 +10,10 @@
         android:id="@+id/switchWakeUp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="自动唤醒"
+        android:text="@string/switch_wakeup_text"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="UseSwitchCompatOrMaterialXml" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/floatingActionButton"
@@ -23,7 +24,8 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:srcCompat="@drawable/ic_baseline_keyboard_voice" />
+        app:srcCompat="@drawable/ic_baseline_keyboard_voice"
+        android:focusable="true" />
 
     <ScrollView
         android:id="@+id/scrollView2"
@@ -37,12 +39,12 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical">
 
             <TextView
                 android:id="@+id/tvVoiceRecgResult"
-                android:layout_width="411dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="328dp"
                 android:text="Hello World!"
@@ -55,7 +57,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"
-        android:text="TextView"
+        android:text=""
         android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@+id/floatingActionButton"
         app:layout_constraintEnd_toEndOf="parent"
