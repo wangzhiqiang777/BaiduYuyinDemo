@@ -64,7 +64,13 @@ public class MainActivity extends AppCompatActivity {
         initPermission();//动态权限
 
         serviceManager = new VoiceServiceManager(this);
-        serviceManager.registerListener(voiceListener);
+        serviceManager.setVoiceListener(voiceListener);
+        serviceManager.setOnBindedListener(new VoiceServiceManager.OnBindedListener() {
+            @Override
+            public void onBinded() {
+                swWakeUp.setChecked(serviceManager.wakeupIsStart());
+            }
+        });
         serviceManager.start();
 
         mChatRobot = new ChatRobot(this);//语音聊天机器人

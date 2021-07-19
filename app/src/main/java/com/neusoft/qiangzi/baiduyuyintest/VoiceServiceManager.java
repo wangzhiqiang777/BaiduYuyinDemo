@@ -14,8 +14,8 @@ import static android.os.Build.VERSION.SDK_INT;
 
 public class VoiceServiceManager extends VoiceBinder.Stub {
     private static final String TAG = "VoiceServiceManager";
-    public static final String SERVICE_NAME = "com.neusoft.qiangzi.voiceassistant.VoiceService";
-    public static final String SERVICE_PACKEG = "com.neusoft.qiangzi.voiceassistant";
+    public static final String SERVICE_NAME = "com.neusoft.qiangzi.baiduyuyintest.VoiceService";
+    public static final String SERVICE_PACKEG = "com.neusoft.qiangzi.baiduyuyintest";
     private Context context;
     private VoiceBinder binder;
     private VoiceListener listener;

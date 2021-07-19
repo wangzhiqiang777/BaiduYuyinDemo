@@ -51,6 +51,7 @@ public class VoiceService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.d(TAG, "onCreate: is called");
         mAsr = new MyRecognizer(this, recogListener);//初始化asr
         mTts = new NonBlockSyntherizer(this,getSpeechConfig(),null);// 初始化TTS引擎
         mWakeup = new MyWakeup(this, wakeupListener);//初始化唤醒
@@ -120,6 +121,7 @@ public class VoiceService extends Service {
 
             @Override
             public void wakeupStart() throws RemoteException {
+                if(wakeupIsStarted)return;
                 VoiceService.this.wakeupStart();
                 wakeupIsStarted = true;
                 //保存语音唤醒
@@ -142,6 +144,10 @@ public class VoiceService extends Service {
 
             @Override
             public void registerListener(VoiceListener listener) throws RemoteException {
+                if (listener == null) {
+                    Log.e(TAG, "registerListener: listener is null");
+                    return;
+                }
                 mListenerList.register(listener);
                 Log.d(TAG, "registerListener: current size:" + mListenerList.getRegisteredCallbackCount());
             }
