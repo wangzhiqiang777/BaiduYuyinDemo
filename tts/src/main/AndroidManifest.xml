@@ -9,13 +9,13 @@
     <application>
         <meta-data
             android:name="com.baidu.speech.APP_ID"
-            android:value="22218301"/>
+            android:value="14646292"/>
 
         <meta-data
             android:name="com.baidu.speech.API_KEY"
-            android:value="SbTVGtl4u9HV1NQj2sNH5Yjd"/>
+            android:value="TGvPkwwxlZVXnv4ebuKKgYqL"/>
         <meta-data
             android:name="com.baidu.speech.SECRET_KEY"
-            android:value="67Hn14XrWHwcYUDHWB58R1AXx8MVs9BQ"/>
+            android:value="V3hL4ovo3xV9hvrlbjo2V1c7ddQHZGX0"/>
     </application>
 </manifest>
